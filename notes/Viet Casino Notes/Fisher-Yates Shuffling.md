@@ -1,0 +1,3 @@
+- Modern Shuffling Algorithm
+- Loop back to front, bypassing index 0
+	- 
