@@ -5,8 +5,7 @@ export function isValidSingle(selectedCombo: number[]): boolean {
     else return true;
 }
 
-export function canBeatSingle(cardA: number, cardB: number): boolean {
+export function canBeatSingle(cardA: number[], cardB: number[]): boolean {
     if (cardA === cardB) return false;
-    return cardIsBigger(cardA, cardB);
+    return cardIsBigger(cardA[0], cardB[0]);
 }
-
