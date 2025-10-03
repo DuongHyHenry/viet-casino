@@ -4,44 +4,64 @@ import { Combo } from './combos/index'
 
 export type PlayerID = string;
 
-export type playerState {
+export type playerState = {
     id: PlayerID;
     hand: number[];
-    hasPassed: boolean;
     hasWon: boolean;
 }
 
 export type Phase =
   | { type: 'Dealing' }
-  | { type: 'First Play'; }
-  | { type: 'Control'; current: PlayerID; currentCombo: Combo; }
-  | { type: 'Continuation'; current: PlayerID; currentCombo: Combo; }
-  | { type: 'Inheritance'; current: PlayerID; currentCombo: Combo; }
+  | { type: 'FirstPlay'; starter: PlayerID; }
+  | { type: 'Round'; round: RoundState; }
   | { type: 'End'; ranking: PlayerID[]; };
 
-export function reducer(state: gameState): gameState {
-  switch (state.phase.type) {
-    case 'Dealing':
+export function reducer(state: GameState, action: Actions): GameState {
+  switch (action.type) {
+    case 'DEAL':
       return handlers.handleDealing(state);
-    case 'First Play':
-      //handle first play
-    case 'Control':
-      //handle control
-    case 'Continuation':
-      //handle continuation
-    case 'Inheritance':
-      //handle inheritance
-    case 'End':
-      //handle end
+    case 'PLAY':
+      if (state.phase.type === 'FirstPlay') {
+        return handlers.handleFirstPlay(state, state.players[action.player], action.combo);
+      }
+      if (state.phase.type === 'Round') {
+        if ((state.phase.round.controller === action.player && state.phase.round.combosPlayed === 0)) {
+          return handlers.handlePlayFromControl(state, state.players[action.player], action.combo);
+        }
+        if ((state.phase.round.passesSinceWin === state.seats.length - state.winners.length && state.phase.round.inheritor === action.player)) {
+          return handlers.handlePlayFromControl(state, state.players[action.player], action.combo);
+        }
+        return handlers.handlePlayCard(state, state.players[action.player], action.combo);
+      }
+      return { ...state, error: 'Cannot play in this phase.' };
+    case 'PASS':
+      return handlers.handlePass(state, state.players[action.player]);
     default:
       return state;
   }
 }
 
-export type gameState = {
+export type Actions =
+  | { type: 'DEAL' }
+  | { type: 'PLAY'; player: PlayerID; combo: Combo }
+  | { type: 'PASS'; player: PlayerID }
+
+export type RoundState = {
+  controller: PlayerID | null;
+  lastComboPlayed: Combo | null;
+  playerToBeat: PlayerID | null;
+  currentPlayer: PlayerID;
+  combosPlayed: number;
+  playersIn: Set<PlayerID>;
+  passesSinceWin: number;
+  inheritor?: PlayerID;
+}
+
+export type GameState = {
   phase: Phase;
   seats: PlayerID[];
   seatIndex: Record<PlayerID, number>;
   players: Record<PlayerID, playerState>;
-  winnerIndex: PlayerID[];
+  winners: PlayerID[];
+  error?: string;
 }

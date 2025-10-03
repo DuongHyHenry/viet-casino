@@ -1,141 +1,314 @@
 import { Deck } from "../deck";
-import { playerState } from "./player-state";
+import { playerState } from "./game-state";
 import * as combos from './combos';
-import { gameState } from './game-state';
+import { GameState } from './game-state';
+import { RoundState } from './game-state';
+import { PlayerID } from './game-state';
 
-export function handleDealing(state: gameState): gameState {
-    const deck = new Deck();
-    deck.shuffle();
-    let hand1 = deck.getCards().slice(0, 13);
-    let hand2 = deck.getCards().slice(13, 26);
-    let hand3 = deck.getCards().slice(26, 39);
-    let hand4 = deck.getCards().slice(39);
-    state.players[state.seatIndex[0]].hand = hand1;
-    state.players[state.seatIndex[1]].hand = hand2;
-    state.players[state.seatIndex[2]].hand = hand3;
-    state.players[state.seatIndex[3]].hand = hand4;
-    return { ...state, phase: { type: 'First Play' } };
+export function updateGameState(phase: GameState['phase'], seats: PlayerID[], seatIndex: Record<PlayerID, number>, players: Record<PlayerID, playerState>, winners: PlayerID[]): GameState { 
+    return { 
+        phase: phase, 
+        seats: seats, 
+        seatIndex: seatIndex, 
+        players: players, 
+        winners: winners 
+    }; 
 }
 
-export function handleFirstPlay(state: gameState, player: playerState, selectedCombo: combos.Combo): gameState | Error {
-    //find player with 3 of spades
-    if (!player.hand.includes(0)) { //3 of spades is represented by 0
-        return { ...state };
-    }
-    else {
-        if (selectedCombo.cards.includes(0)) {
-            player.hand = player.hand.filter(card => !selectedCombo.cards.includes(card));
-            return { ...state, phase: { type: 'Continuation', current: player.id, currentCombo: selectedCombo}};
+export function updateRoundState(prev: RoundState, updates: Partial<RoundState>): RoundState {
+    return {
+        ...prev,
+        ...updates,
+        playersIn: updates.playersIn ? new Set(updates.playersIn) : new Set(prev.playersIn),
+    };
+}
+
+export function findNextPlayer(state: GameState, round: RoundState, currentPlayer: PlayerID): PlayerID {
+    const currentPlayerIndex = state.seatIndex[currentPlayer];
+    for (let i = 1; i < state.seats.length; i++) {
+        const nextPlayerIndex = (currentPlayerIndex + i) % state.seats.length;
+        if (round.playersIn.has(state.seats[nextPlayerIndex]) && !state.winners.includes(state.seats[nextPlayerIndex])) {
+            return state.seats[nextPlayerIndex];
         }
         else {
-            return Error("First play must include 3 of spades");
+            continue;
         }
     }
+    throw new Error('No next player found. This should not happen as player should have gotten control.');
 }
 
-export function handlePlayCard(state: gameState, player: playerState, currentCombo: combos.Combo, selectedCombo: combos.Combo): gameState {
-    if (player.hand.length < currentCombo.cards.length) {
-        player.hasPassed = true;
-        return { ...state};
+export function handleDealing(state: GameState): GameState {
+    const deck = new Deck();
+    deck.shuffle();
+    let cards = deck.getCards();
+    const players: Record<PlayerID, playerState> = {};
+    for (let i = 0; i < state.seats.length; i++) {
+        const id = state.seats[i];
+        players[id] = {
+            id: id,
+            hand: cards.slice(i * 13, (i + 1) * 13),
+            hasWon: false,
+        };
     }
-    if (player.hasPassed === true) {
-        return { ...state};
-    }
-    else {
-        switch (currentCombo.type) {
-            case 'Single':
-                if (combos.canBombSingleTwo(selectedCombo.cards, currentCombo.cards[0])) {
-                    player.hand = player.hand.filter(card => !selectedCombo.cards.includes(card));
-                    return { ...state, phase: { type: 'Continuation', current: player.id, currentCombo: selectedCombo}};
-                }
-                if (combos.isValidSingle(selectedCombo.cards) && combos.canBeatSingle(selectedCombo.cards, currentCombo.cards)) {
-                    player.hand = player.hand.filter(card => !selectedCombo.cards.includes(card));
-                    return { ...state, phase: { type: 'Continuation', current: player.id, currentCombo: selectedCombo}};
-                }
-            case 'Double':
-                if (combos.canBombDoubleTwo(selectedCombo.cards, currentCombo.cards)) {
-                    player.hand = player.hand.filter(card => !selectedCombo.cards.includes(card));
-                    return { ...state, phase: { type: 'Continuation', current: player.id, currentCombo: selectedCombo}};
-                }
-                if (combos.isValidDouble(selectedCombo.cards) && combos.canBeatDouble(selectedCombo.cards, currentCombo.cards)) {
-                    player.hand = player.hand.filter(card => !selectedCombo.cards.includes(card));
-                    return { ...state, phase: { type: 'Continuation', current: player.id, currentCombo: selectedCombo}};
-                }
-            case 'Triple':
-                if (combos.isValidTriple(selectedCombo.cards) && combos.canBeatTriple(selectedCombo.cards, currentCombo.cards)) {
-                    player.hand = player.hand.filter(card => !selectedCombo.cards.includes(card));
-                    return { ...state, phase: { type: 'Continuation', current: player.id, currentCombo: selectedCombo}};
-                }
-            case 'Straight':
-                if (combos.isValidStraight(selectedCombo.cards) && combos.canBeatStraight(selectedCombo.cards, currentCombo.cards)) {
-                    player.hand = player.hand.filter(card => !selectedCombo.cards.includes(card));
-                    return { ...state, phase: { type: 'Continuation', current: player.id, currentCombo: selectedCombo}};
-                }
-            case 'Quadruple':
-                if (combos.isValidQuadruple(selectedCombo.cards) && combos.canBeatQuadruple(selectedCombo.cards, currentCombo.cards)) {
-                    player.hand = player.hand.filter(card => !selectedCombo.cards.includes(card));
-                    return { ...state, phase: { type: 'Continuation', current: player.id, currentCombo: selectedCombo}};
-                }
-            case 'Double Straight':
-                if (combos.isValidDoubleStraight(selectedCombo.cards) && combos.canBeatDoubleStraight(selectedCombo.cards, currentCombo.cards)) {
-                    player.hand = player.hand.filter(card => !selectedCombo.cards.includes(card));
-                    return { ...state, phase: { type: 'Continuation', current: player.id, currentCombo: selectedCombo}};
-                }
-            default:
-                player.hasPassed = true;
-                return { ...state};
-            }
-    }
+    const starter = state.seats.find(pid => players[pid].hand.includes(0))!;
+    return updateGameState(
+        { type: 'FirstPlay', starter: starter }, 
+        state.seats, 
+        state.seatIndex, 
+        players, 
+        []
+    );
 }
 
-export function handlePass(state: gameState, player: playerState): gameState {
-    player.hasPassed = true;
-    return { ...state };
-}
-
-export function checkForControl(state: gameState): gameState {
-    let activePlayers = Object.values(state.players).filter(player => !player.hasPassed);
-    if (activePlayers.length === 1) {
-        let winner = activePlayers[0];
-        winner.hasPassed = false;
-        return { ...state, phase: { type: 'Control', current: winner.id, currentCombo: { type: 'Single', cards: [] } } };
+export function handleFirstPlay(state: GameState, player: playerState, selectedCombo: combos.Combo): GameState {
+    if (state.phase.type !== "FirstPlay" || player.id !== state.phase.starter) {
+      return { ...state, error: 'It is not your turn to start.' };
     }
-    else {
-        return { ...state };
-    }
-}
-
-export function handlePlayFromControl(state: gameState, player: playerState, selectedCombo: combos.Combo): gameState | Error{
-    if (selectedCombo.cards.length === 0) {
-        return Error("Must play a valid combo from control");
-    }
-    let combo = combos.isValidCombo(selectedCombo);
-    if (combo === null) {
-        return Error("Invalid combo played from control");
-    }
-    else {
-        player.hand = player.hand.filter(card => !selectedCombo.cards.includes(card));
-        Object.values(state.players).forEach(p => p.hasPassed = false);
-        if (player.hand.length === 0) {
-            let newState = { ...state, phase: { type: 'Inheritance', current: player.id, currentCombo: combo } }; //TODO: 
-            return handleWin(newState, player); //TODO: Implement a way to do the "seize control vs inherit control" rule
+    if ((combos.isValidCombo(selectedCombo) !== null) && selectedCombo.cards.includes(0)) {
+        const newHand = state.players[player.id].hand.filter(card => !selectedCombo.cards.includes(card));
+        const updatedPlayers = {
+            ...state.players,
+            [player.id]: {
+                ...player,
+                hand: newHand,
+            },
         }
-        return { ...state, phase: { type: 'Continuation', current: player.id, currentCombo: combo } };
+
+        const tempRound: RoundState = {
+            controller: player.id,
+            lastComboPlayed: selectedCombo,
+            playerToBeat: player.id,
+            currentPlayer: player.id,
+            combosPlayed: 1,
+            playersIn: new Set<PlayerID>(state.seats),
+            passesSinceWin: 0,
+            inheritor: undefined,
+        };
+
+        if (updatedPlayers[player.id].hand.length === 0) {
+            const winners = [...state.winners, player.id];
+            const players = {
+                ...updatedPlayers,
+                [player.id]: { ...updatedPlayers[player.id], hasWon: true },
+            };       
+             return updateGameState(
+                { type: 'End', ranking: winners },
+                state.seats,
+                state.seatIndex,
+                players,
+                winners,
+            )
+        }
+        
+        const nextPlayer = findNextPlayer(state, tempRound, player.id);
+        const newRound: RoundState = { ...tempRound, currentPlayer: nextPlayer };
+
+        return updateGameState(
+            { type: 'Round', round: newRound },
+            state.seats,
+            state.seatIndex,
+            updatedPlayers,
+            state.winners,
+        )
+    }
+    else {
+        return { ...state, error: 'Invalid combo played. Please play a valid combo that includes the 3 of Spades.' };
     }
 }
 
-export function handleWin(state: gameState, player: playerState): gameState {
-    //append player to winnerIndex and set their hasWon to true
-    player.hasWon = true;
-    state.winnerIndex.push(player.id);
-    //check if game is over
-    if (state.winnerIndex.length === 3) {
-        let lastPlayer = Object.values(state.players).find(p => !p.hasWon);
-        state.winnerIndex.push(lastPlayer.id);
-        return { ...state, phase: { type: 'End', ranking: state.winnerIndex } };
+export function handlePlayCard(state: GameState, player: playerState, selectedCombo: combos.Combo): GameState {
+    if (state.phase.type !== 'Round') return { ...state, error: 'No active round.' };
+    if (player.id !== state.phase.round.currentPlayer) {
+        return { ...state, error: 'Not your turn.' };
+    }
+    const currentCombo = state.phase.round.lastComboPlayed;
+    if (currentCombo === null) {
+        return { ...state, error: 'No combo to beat. Why are we not in the control function?' };
+    }
+    if (combos.canBeatCombo(currentCombo, selectedCombo)) {
+        const newHand = state.players[player.id].hand.filter(card => !selectedCombo.cards.includes(card));
+        const updatedPlayers = {
+            ...state.players,
+            [player.id]: {
+                ...player,
+                hand: newHand,
+            },
+        }
+
+        if (updatedPlayers[player.id].hand.length === 0) {
+            return handleWin(state, player);
+        }
+
+        const round = state.phase.round;
+        return updateGameState(
+            { type: 'Round', round: updateRoundState( round, {
+                controller: round.controller,
+                lastComboPlayed: selectedCombo,
+                playerToBeat: player.id,
+                currentPlayer: findNextPlayer(state, round, player.id),
+                combosPlayed: round.combosPlayed + 1,
+                playersIn: round.playersIn,
+                passesSinceWin: 0,
+                inheritor: undefined,
+            } ) },
+            state.seats,
+            state.seatIndex,
+            updatedPlayers,
+            state.winners,
+        )
+    }
+    else {
+        return { ...state, error: 'Invalid combo played. Please play a valid combo that can beat the current combo.' };
     }
 }
 
-export function handleInheritance(state: gameState, player: playerState, selectedCombo: combos.Combo): gameState {
-    
+export function handlePass(state: GameState, player: playerState): GameState {
+    if (state.phase.type !== 'Round') return { ...state, error: 'No active round.' };
+    const round = state.phase.round;
+    if (player.id !== round.currentPlayer) {
+        return { ...state, error: 'Not your turn.' };
+    }
+    if (state.phase.round.playersIn.size === 1) {
+        if (round.playerToBeat === null) {
+            return { ...state, error: 'Invalid round state, player to beat should not be null.' };
+        }
+
+        const alive = state.seats.filter(pid => !state.winners.includes(pid));
+
+        return updateGameState(
+            { type: 'Round', round: updateRoundState( round, {
+                controller: round.playerToBeat,
+                lastComboPlayed: null,
+                playerToBeat: null,
+                currentPlayer: round.playerToBeat,
+                combosPlayed: 0,
+                playersIn: new Set<PlayerID>(alive),
+                passesSinceWin: 0,
+                inheritor: undefined,
+            } ) },
+            state.seats,
+            state.seatIndex,
+            state.players,
+            state.winners,
+        )
+    }
+    else {
+        const newPlayersIn = new Set<PlayerID>(round.playersIn);
+        if (!newPlayersIn.has(player.id)) {
+            return { ...state, error: 'You already passed.' };
+        }
+        newPlayersIn.delete(player.id);
+        let passesSinceWinValue = round.passesSinceWin;
+        if (state.phase.round.inheritor) {
+            passesSinceWinValue++;
+        }
+        const nextRound: RoundState = { ...round, playersIn: newPlayersIn };
+        return updateGameState(
+            { type: 'Round', round: updateRoundState( round, {
+                controller: round.controller,
+                lastComboPlayed: round.lastComboPlayed,
+                playerToBeat: round.playerToBeat,
+                currentPlayer: findNextPlayer(state, nextRound, player.id),
+                combosPlayed: round.combosPlayed,
+                playersIn: newPlayersIn,
+                passesSinceWin: passesSinceWinValue,
+            } ) },
+            state.seats,
+            state.seatIndex,
+            state.players,
+            state.winners,
+        )
+    }
+}
+
+export function handlePlayFromControl(state: GameState, player: playerState, selectedCombo: combos.Combo): GameState {
+    if (state.phase.type !== 'Round') {
+        return { ...state, error: 'Not in Round Phase.' };
+    }
+    const round = state.phase.round;
+    if (combos.isValidCombo(selectedCombo) !== null) {
+        const newHand = state.players[player.id].hand.filter(card => !selectedCombo.cards.includes(card));
+        const updatedPlayers = {
+            ...state.players,
+            [player.id]: {
+                ...player,
+                hand: newHand,
+            },
+        }
+        if (updatedPlayers[player.id].hand.length === 0) {
+            return handleWin(state, player);
+        }
+        const alive = state.seats.filter(pid => !state.winners.includes(pid));
+        const nextRound: RoundState = { ...round, playersIn: new Set<PlayerID>(alive) };
+        return updateGameState(
+            { type: 'Round', round: updateRoundState( round, {
+                controller: player.id,
+                lastComboPlayed: selectedCombo,
+                playerToBeat: player.id,
+                currentPlayer: findNextPlayer(state, nextRound, player.id),
+                combosPlayed: 1,
+                playersIn: new Set<PlayerID>(alive),
+                passesSinceWin: 0,
+                inheritor: undefined,
+            } ) },
+            state.seats,
+            state.seatIndex,
+            updatedPlayers,
+            state.winners,
+        )
+    }
+    else {
+        return { ...state, error: 'Invalid combo played. Please play a valid combo.' };
+    }
+}
+
+export function handleWin(state: GameState, player: playerState): GameState {
+    //TODO: Add a condition where if someone hasn't put any cards down when another player wins, they insta lose
+    if (state.phase.type != 'Round') {
+        return { ...state, error: 'Invalid phase, should be Round.' }
+    }
+    const winners = state.winners.includes(player.id) ? state.winners : [...state.winners, player.id];
+    const players: Record<PlayerID, playerState> = {
+        ...state.players,
+        [player.id]: {
+            ...state.players[player.id],
+            hasWon: true,
+        },
+    };
+    const round = state.phase.round;
+    if (winners.length === 3) {
+        let lastPlayer = Object.values(players).find(p => !p.hasWon);
+        if (!lastPlayer) {
+            return { ...state, error: 'Error determining last player.' };
+        }
+        const ranking = [...winners, lastPlayer.id];
+        return updateGameState(
+            { type: 'End', ranking: ranking },
+            state.seats,
+            state.seatIndex,
+            players,
+            ranking,
+        )
+    }
+    else {
+        const alive = state.seats.filter(pid => !winners.includes(pid));
+        const nextRound: RoundState = { ...round, playersIn: new Set<PlayerID>(alive) };
+        const nextState: GameState = { ...state, players, winners, phase: { type: 'Round', round: nextRound } };
+        return updateGameState(
+            { type: 'Round', round: updateRoundState( round, {
+                controller: round.controller,
+                lastComboPlayed: round.lastComboPlayed,
+                playerToBeat: round.playerToBeat,
+                currentPlayer: findNextPlayer(nextState, nextRound, player.id),
+                combosPlayed: round.combosPlayed,
+                playersIn: new Set<PlayerID>(alive),
+                passesSinceWin: 1,
+                inheritor: findNextPlayer(nextState, nextRound, player.id),
+            } ) },
+            state.seats,
+            state.seatIndex,
+            players,
+            winners,
+        )
+    }
 }
