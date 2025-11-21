@@ -1,4 +1,4 @@
-import { cardIsBigger } from "../rules";
+import { cardIsBigger } from "../rules.js";
 
 export function isValidTriple(selectedCombo: number[]): boolean {
     if (selectedCombo.length !== 3) return false;

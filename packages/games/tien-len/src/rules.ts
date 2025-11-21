@@ -1,5 +1,4 @@
-import { get } from "http";
-import { getSuit, getRank, getCard } from "../../../cards/src/cards";
+import { getSuit, getRank, getCard } from "@viet-casino/awesome-card-rules";
 
 export function getSuitValue(card: number) {
     return Math.floor(card / 13) % 4;

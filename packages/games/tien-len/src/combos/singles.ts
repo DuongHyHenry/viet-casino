@@ -1,4 +1,4 @@
-import { cardIsBigger } from "../rules";
+import { cardIsBigger } from "../rules.js";
 
 export function isValidSingle(selectedCombo: number[]): boolean {
     if (selectedCombo.length !== 1) return false;

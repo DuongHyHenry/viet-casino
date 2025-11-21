@@ -1,6 +1,6 @@
 import * as handlers from './game-handlers.js'
 
-import { Combo } from './combos/index'
+import { Combo } from './combos/index.js'
 
 export type PlayerID = string;
 

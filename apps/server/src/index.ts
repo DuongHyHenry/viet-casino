@@ -2,12 +2,12 @@ import fs from 'fs';
 import Fastify from 'fastify';
 import crypto from 'crypto';
 import { Server } from 'socket.io';
+
 import * as tienlen from '@viet-casino/awesome-tien-len';
-import * as cards from '@viet-casino/awesome-card-rules';
 
 fs;
 
-const games = new Map<string, state.GameState>();
+const games = new Map<string, tienlen.GameState>();
 
 const fastify = Fastify({
     logger: true
@@ -33,8 +33,8 @@ fastify.post('/tienlen/start', (request, reply) => {
     if (users.length != 4) {
         return reply.code(400).send({ error: "Wrong number of players" });
     }
-    const initializedGame = state.createGame(users);
-    const newState = state.reducer(initializedGame, {type: 'DEAL'});
+    const initializedGame = tienlen.createGame(users);
+    const newState = tienlen.reducer(initializedGame, {type: 'DEAL'});
     const gameID = crypto.randomUUID();
     games.set(gameID, newState);
     
@@ -43,13 +43,13 @@ fastify.post('/tienlen/start', (request, reply) => {
 
 fastify.post('/tienlen/:gameID/play/:playerID', (request, reply) => {
     const { gameID, playerID } = request.params as { gameID: string; playerID: string };
-    const { move } = request.body as { move: Combo };
+    const { move } = request.body as { move: tienlen.Combo };
 
     const game = games.get(gameID);
     if (!game) {
         return reply.code(404).send({ error: "Game not found" });
     }
-    const newState = state.reducer(game, {
+    const newState = tienlen.reducer(game, {
         type: 'PLAY', 
         player: playerID, 
         combo: move
@@ -66,7 +66,7 @@ fastify.post('/tienlen/:gameID/pass/:playerID', (request, reply) => {
     if (!game) {
         return reply.code(404).send({ error: "Game not found" });
     }
-    const newState = state.reducer(game, {type: 'PASS', player: playerID});
+    const newState = tienlen.reducer(game, {type: 'PASS', player: playerID});
     games.set(gameID, newState);
 
     return reply.send({ gameID, state: newState });

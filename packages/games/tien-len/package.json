@@ -7,6 +7,9 @@
     "exports": {
         ".": "./dist/index.js"
     },
+    "dependencies": {
+        "@viet-casino/awesome-card-rules": "0.0.1"
+    },
     "scripts": {
         "build": "tsc -p tsconfig.json"
     }

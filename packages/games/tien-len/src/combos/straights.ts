@@ -1,5 +1,5 @@
-import { cardIsBigger } from "../rules";
-import { getRank } from "../../../../cards/src/cards";
+import { cardIsBigger } from "../rules.js";
+import { getRank } from "@viet-casino/awesome-card-rules";
 
 export function isValidStraight(selectedCombo: number[]): boolean {
     if (selectedCombo.length < 3) return false; //minimum straight length is 3
