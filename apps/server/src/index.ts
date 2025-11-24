@@ -26,14 +26,14 @@ io.on('connection', (socket) => {
 });
 
 fastify.post('/tienlen/start', (request, reply) => {
-    const { users } = request.body as { users: string[] };
-    if (!Array.isArray(users) || users.some(u => typeof u !== 'string')) {
+    const { players } = request.body as { players: string[] };
+    if (!Array.isArray(players) || players.some(u => typeof u !== 'string')) {
         return reply.code(400).send({ error: "Wrong input format" });
     }
-    if (users.length != 4) {
+    if (players.length != 4) {
         return reply.code(400).send({ error: "Wrong number of players" });
     }
-    const initializedGame = tienlen.createGame(users);
+    const initializedGame = tienlen.createGame(players);
     const newState = tienlen.reducer(initializedGame, {type: 'DEAL'});
     const gameID = crypto.randomUUID();
     games.set(gameID, newState);
