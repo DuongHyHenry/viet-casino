@@ -16,6 +16,7 @@ class TienLenEnv(gym.Env):
                 self.action.append(("PASS", None))
             else:
                 self.action.append(("SINGLE", i-1))
+        self.action_space = gym.spaces.Discrete(len(self.action))
         self.agent_hand = np.zeros(52) # Needs to be able to represent all cards in the game
         self.last_played = np.zeros(52)
         self.game_id = None
@@ -24,8 +25,16 @@ class TienLenEnv(gym.Env):
         self.opponents_passed = np.zeros(4) # Making it all consistent, using a mask to represent all passed opponents
         self.current_controller = np.zeros(4) 
         self.current_player = np.zeros(4) # Making it all consistent, using a mask to represent current player
+        self.player_order = ["agent", "bot1", "bot2", "bot3"]
         self.roundNumber = 0
         self.round_status = None
+        obs_dimensions = 52 + 52 + 3 + 4 + 4 + 4
+        self.observation_space = gym.spaces.Box(
+            low=0.0,
+            high=1.0,
+            shape=(obs_dimensions,),
+            dtype=np.float32,
+        )
 
     def _convert_hand(self, card_ids):
         mask = np.zeros(52)
@@ -35,11 +44,17 @@ class TienLenEnv(gym.Env):
     
     def _convert_table(self, player_ids):
         mask = np.zeros(4)
-        i = 0
         for player_id in player_ids:
-            mask[i] = 1
-            i += 1
+            index = self.player_order.index(player_id)
+            mask[index] = 1
         return mask
+        
+    def _convert_player(self, player_id):
+        mask = np.zeros(4)
+        index = self.player_order.index(player_id)
+        mask[index] = 1
+        return mask
+
         
     def _get_obs(self, state):
         self.agent_hand = self._convert_hand(state["players"][0]["hand"])
@@ -47,18 +62,18 @@ class TienLenEnv(gym.Env):
         self.opponent_card_count[0] = len(state["players"][1]["hand"])
         self.opponent_card_count[1] = len(state["players"][2]["hand"])
         self.opponent_card_count[2] = len(state["players"][3]["hand"])
-        self.current_controller = self._convert_table(state["phase"]["round"]["controller"])
-        self.current_player = self._convert_table(state["phase"]["round"]["currentPlayer"])
+        self.current_controller = self._convert_player(state["phase"]["round"]["controller"])
+        self.current_player = self._convert_player(state["phase"]["round"]["currentPlayer"])
         self.players_in = self._convert_table(state["phase"]["round"]["playersIn"])
         # TODO: Figure out a way to calculate how many opponents have passed(opponents_passed) 
-        obs = [
+        obs = np.concatenate([
             self.agent_hand, 
             self.last_played, 
             self.opponent_card_count,
             self.current_controller,
             self.current_player,
             self.players_in
-            ]
+            ]).astype(np.float32)
         return obs
     
     # def _get_info(self, state):
