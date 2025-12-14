@@ -4,6 +4,7 @@ import * as combos from './combos/index.js';
 import { GameState } from './game-state.js';
 import { RoundState } from './game-state.js';
 import { PlayerID } from './game-state.js';
+import { sortHelper } from "./rules.js";
 
 export function updateGameState(phase: GameState['phase'], seats: PlayerID[], seatIndex: Record<PlayerID, number>, players: Record<PlayerID, playerState>, winners: PlayerID[]): GameState { 
     return { 
@@ -44,13 +45,16 @@ export function handleDealing(state: GameState): GameState {
     const players: Record<PlayerID, playerState> = {};
     for (let i = 0; i < state.seats.length; i++) {
         const id = state.seats[i];
+        const hand = cards
+            .slice(i * 13, (i + 1) * 13)
+            .sort(((a, b) => a - b));
         players[id] = {
             id: id,
-            hand: cards.slice(i * 13, (i + 1) * 13),
+            hand: hand,
             hasWon: false,
         };
     }
-    const starter = state.seats.find(pid => players[pid].hand.includes(0))!;
+    const starter = state.seats.find(pid => players[pid].hand.includes(2))!;
     return updateGameState(
         { type: 'FirstPlay', starter: starter }, 
         state.seats, 
@@ -64,7 +68,7 @@ export function handleFirstPlay(state: GameState, player: playerState, selectedC
     if (state.phase.type !== "FirstPlay" || player.id !== state.phase.starter) {
       return { ...state, error: 'It is not your turn to start.' };
     }
-    if ((combos.isValidCombo(selectedCombo) !== null) && selectedCombo.cards.includes(0)) {
+    if ((combos.isValidCombo(selectedCombo) !== null) && selectedCombo.cards.includes(2)) {
         const newHand = state.players[player.id].hand.filter(card => !selectedCombo.cards.includes(card));
         const updatedPlayers = {
             ...state.players,

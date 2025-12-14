@@ -5,6 +5,7 @@ export declare class Deck {
      * Shuffle the deck using Fisher-Yates algorithm
      */
     shuffle(): void;
+    printDeck(): void;
     /**
      * Get a copy of the cards array
      */

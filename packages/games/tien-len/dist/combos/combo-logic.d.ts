@@ -17,6 +17,7 @@ export type Combo = {
     type: 'Double Straight';
     cards: number[];
 };
+export declare function convertToCombo(selected: number[]): Combo | null;
 export declare function isValidCombo(selected: Combo): Combo | null;
 export declare function canBeatCombo(currentCombo: Combo, selectedCombo: Combo): boolean;
 //# sourceMappingURL=combo-logic.d.ts.map

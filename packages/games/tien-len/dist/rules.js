@@ -8,7 +8,7 @@ export function getRankValue(card) {
     else if (getRank(card) === '2')
         return 14; //2 is the highest rank
     else
-        return Math.floor(card / 4) % 13;
+        return Math.floor(card) % 13;
 }
 export function cardIsBigger(cardA, cardB) {
     if (cardA === cardB)

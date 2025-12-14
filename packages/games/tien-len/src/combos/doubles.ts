@@ -1,14 +1,17 @@
 import { cardIsBigger } from "../rules.js";
+import { getCard } from "@viet-casino/awesome-card-rules"
+
 
 export function isValidDouble(selectedCombo: number[]): boolean {
     if (selectedCombo.length !== 2) return false;
-    if (selectedCombo[0] !== selectedCombo[1]) return false;
+    if (getCard(selectedCombo[0])[0] !== getCard(selectedCombo[1])[0]) return false;
     else return true;
 }
 
 export function canBeatDouble(doubleA: number[], doubleB: number[]): boolean {
     if (doubleA === doubleB) return false;
-    const cardA = doubleA[0];
-    const cardB = doubleB[0];
+    if (!isValidDouble(doubleA) || !isValidDouble(doubleB)) return false
+    const cardA = doubleA[1];
+    const cardB = doubleB[1];
     return cardIsBigger(cardA, cardB);
 }

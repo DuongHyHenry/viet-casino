@@ -67,6 +67,8 @@ class TienLenDQNAgent:
         self.discount_factor = 0.95
         self.buffer_capacity = 50_000
         self.training_step_count = 0
+        self.tau = 0.005
+        self.episode_durations = []
         self.batch_size = 128 # TODO: Don't quite understand this yet
         self.memory = ReplayMemory(10000)
 
@@ -151,49 +153,52 @@ class TienLenDQNAgent:
 
 
     def update(self, obs):
+        return
 
     def decay_epsilon(self):
+        return
+    
+    # Training loop
 
-# Training loop
-# TODO: Adapt it to my implementation with the Agent class
-
-if torch.cuda.is_available() or torch.backends.mps.is_available():
-    num_episodes = 600
-else:
-    num_episodes = 50
-
-for i_episode in range(num_episodes):
-    state, info = env.reset()
-    state = torch.tensor(state, dtype = torch.float32, device = device).unsqueeze(0)
-
-    for t in count():
-        action =  self.get_action(state)
-        observation, reward, terminated, truncated, info = env.step(action.item())
-        reward = torch.tensor([reward], device = device)
-        done = terminated or truncated
-        
-        if done:
-            next_state = None
+    def train(self):
+        if torch.cuda.is_available() or torch.backends.mps.is_available():
+            num_episodes = 600
         else:
-            next_state = torch.tensor(observation, dtype = torch.float32, device = device).unsqueeze(0)
+            num_episodes = 50
 
-        self.memory.push(state, action, next_state, reward)
+        for i_episode in range(num_episodes):
+            state, info = env.reset()
+            state = torch.tensor(state, dtype = torch.float32, device = device).unsqueeze(0)
 
-        state = next_state
+            for t in count():
+                action =  self.get_action(state)
+                observation, reward, terminated, truncated, info = env.step(action.item())
+                reward = torch.tensor([reward], device = device)
+                done = terminated or truncated
+                
+                if done:
+                    next_state = None
+                else:
+                    next_state = torch.tensor(observation, dtype = torch.float32, device = device).unsqueeze(0)
 
-        self.optimize()
+                self.memory.push(state, action, next_state, reward)
 
-        target_net_state_dict = self.target_network.state_dict()
-        policy_net_state_dict = self.online_network.state_dict()
-        for key in policy_net_state_dict:
-            target_net_state_dict[key] = policy_net_state_dict[key] * TAU + \
-                target_net_state_dict[key] * (1.0 - TAU) # TODO: Figure out what TAU is
-        self.target_network.load_state_dict(target_net_state_dict)
+                state = next_state
 
-        if done:
-            episode_durations.append(t + 1)
-            plot_durations() # No plots atm
-            break
+                self.optimize()
+
+                target_net_state_dict = self.target_network.state_dict()
+                policy_net_state_dict = self.online_network.state_dict()
+                for key in policy_net_state_dict:
+                    target_net_state_dict[key] = policy_net_state_dict[key] * self.tau + \
+                        target_net_state_dict[key] * (1.0 - self.tau) # TODO: Figure out what TAU is
+                self.target_network.load_state_dict(target_net_state_dict)
+
+                if done:
+                    self.episode_durations.append(t + 1)
+                    plot_durations() # No plots atm
+                    break
+
 
 # TODO: Make an API that connects my ruleset to this agent
 # TODO: Test the game rules to make sure they even work

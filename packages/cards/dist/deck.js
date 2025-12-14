@@ -1,3 +1,4 @@
+import { getCard } from "./cards.js";
 export class Deck {
     cards;
     constructor() {
@@ -15,6 +16,11 @@ export class Deck {
             if (i !== j) {
                 [this.cards[i], this.cards[j]] = [this.cards[j], this.cards[i]];
             }
+        }
+    }
+    printDeck() {
+        for (let i = 0; i < this.cards.length; i++) {
+            console.log(getCard(i));
         }
     }
     /**

@@ -2,10 +2,13 @@ from typing import Optional
 import requests
 import numpy as np
 import gymnasium as gym
+from pprint import pformat
 
 class TienLenEnv(gym.Env):
-    
-    def __init__(self):
+    metadata = {"render_modes": ["ansi"]}
+
+    def __init__(self, render_mode = "None"):
+        self.render_mode = render_mode
         self.played_cards = 0
         self.server_url = "http://localhost:5000/tienlen"
         self.player_id = "agent"
@@ -35,6 +38,7 @@ class TienLenEnv(gym.Env):
             shape=(obs_dimensions,),
             dtype=np.float32,
         )
+        self.last_state = []
 
     def _convert_hand(self, card_ids):
         mask = np.zeros(52)
@@ -54,7 +58,6 @@ class TienLenEnv(gym.Env):
         index = self.player_order.index(player_id)
         mask[index] = 1
         return mask
-
         
     def _get_obs(self, state):
         self.agent_hand = self._convert_hand(state["players"][0]["hand"])
@@ -74,6 +77,7 @@ class TienLenEnv(gym.Env):
             self.current_player,
             self.players_in
             ]).astype(np.float32)
+        self.last_obs = obs
         return obs
     
     # def _get_info(self, state):
@@ -104,6 +108,7 @@ class TienLenEnv(gym.Env):
         truncated = False
         obs = self._get_obs(state)
         info = state
+        self.last_state = state
         return obs, reward, terminated, truncated, info
 
     def reset(self, seed: Optional[int] = None, options: Optional[dict] = None):
@@ -124,4 +129,11 @@ class TienLenEnv(gym.Env):
         state = data["state"]
         obs = self._get_obs(state)
         info = state
+        self.last_state = state
         return obs, info
+    
+    def render(self):
+        if self.render_mode == None:
+            return
+        else:
+            return pformat(self.last_state, sort_dicts=False)

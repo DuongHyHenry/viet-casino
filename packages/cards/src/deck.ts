@@ -1,3 +1,5 @@
+import { getCard } from "./cards.js";
+
 export class Deck {
     private readonly cards: number[];
 

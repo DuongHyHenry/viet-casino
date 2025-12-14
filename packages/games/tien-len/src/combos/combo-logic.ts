@@ -12,6 +12,60 @@ export type Combo =
   | {type: 'Quadruple'; cards: number[] }
   | {type: 'Double Straight'; cards: number[] };
 
+export function convertToCombo(selected: number[]) : Combo | null {
+  if (selected.length < 1) {
+    return null;
+  }
+  switch (selected.length) {
+    case 1:
+      return {type: 'Single', cards: selected};
+    case 2:
+      if (doubles.isValidDouble(selected)) {
+        return {type: 'Double', cards: selected};
+      }
+      else {
+        return null;
+      }
+    case 3:
+      if (triples.isValidTriple(selected)) {
+        return {type: 'Triple', cards: selected};
+      }
+      else if (straights.isValidStraight(selected)) {
+        return {type: 'Straight', cards: selected};
+      }
+      else {
+        return null;
+      }
+    case 4:
+      if (bombs.isValidQuadruple(selected)) {
+        return {type: 'Quadruple', cards: selected};
+      }
+      else if (straights.isValidStraight(selected)) {
+        return {type: 'Straight', cards: selected};
+      }
+      else {
+        return null;
+      }
+    case 5:
+      if (straights.isValidStraight(selected)) {
+        return {type: 'Straight', cards: selected};
+      }
+      else {
+        return null;
+      }
+    default:
+      if (straights.isValidStraight(selected)) {
+        return {type: 'Straight', cards: selected};
+      }
+      else if (bombs.isValidDoubleStraight(selected)) {
+        return {type: 'Double Straight', cards: selected};
+      }
+      else {
+        return null;
+      }
+  }
+}
+
 export function isValidCombo(selected: Combo): Combo | null {
   if (selected.cards.length < 1) {
     return null;
