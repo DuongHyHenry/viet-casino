@@ -47,7 +47,7 @@ export function handleDealing(state: GameState): GameState {
         const id = state.seats[i];
         const hand = cards
             .slice(i * 13, (i + 1) * 13)
-            .sort(((a, b) => a - b));
+            .sort(sortHelper); //TODO: sorts by numeric order right now, change it to sort by actual tien len strength
         players[id] = {
             id: id,
             hand: hand,

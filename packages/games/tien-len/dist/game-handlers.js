@@ -1,5 +1,6 @@
 import { Deck } from "@viet-casino/awesome-card-rules";
 import * as combos from './combos/index.js';
+import { sortHelper } from "./rules.js";
 export function updateGameState(phase, seats, seatIndex, players, winners) {
     return {
         phase: phase,
@@ -36,20 +37,23 @@ export function handleDealing(state) {
     const players = {};
     for (let i = 0; i < state.seats.length; i++) {
         const id = state.seats[i];
+        const hand = cards
+            .slice(i * 13, (i + 1) * 13)
+            .sort(sortHelper); //TODO: sorts by numeric order right now, change it to sort by actual tien len strength
         players[id] = {
             id: id,
-            hand: cards.slice(i * 13, (i + 1) * 13),
+            hand: hand,
             hasWon: false,
         };
     }
-    const starter = state.seats.find(pid => players[pid].hand.includes(0));
+    const starter = state.seats.find(pid => players[pid].hand.includes(2));
     return updateGameState({ type: 'FirstPlay', starter: starter }, state.seats, state.seatIndex, players, []);
 }
 export function handleFirstPlay(state, player, selectedCombo) {
     if (state.phase.type !== "FirstPlay" || player.id !== state.phase.starter) {
         return { ...state, error: 'It is not your turn to start.' };
     }
-    if ((combos.isValidCombo(selectedCombo) !== null) && selectedCombo.cards.includes(0)) {
+    if ((combos.isValidCombo(selectedCombo) !== null) && selectedCombo.cards.includes(2)) {
         const newHand = state.players[player.id].hand.filter(card => !selectedCombo.cards.includes(card));
         const updatedPlayers = {
             ...state.players,

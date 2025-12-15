@@ -8,8 +8,13 @@ export function isValidStraight(selectedCombo) {
     for (let i = 1; i < selectedCombo.length; i++) {
         if (getRank(selectedCombo[i]) === '2')
             return false; //straight cannot contain '2'
-        if (Number(getRank(selectedCombo[i])) !== Number(getRank(selectedCombo[i - 1])) + 1) {
-            return false;
+        if ((Number(selectedCombo[i]) % 13) !== (Number(selectedCombo[i - 1]) % 13) + 1) {
+            if ((Number(selectedCombo[i]) % 13) === (Number(selectedCombo[i - 1]) % 13) - 12) { //ends with ace
+                continue;
+            }
+            else {
+                return false;
+            }
         }
     }
     return true;

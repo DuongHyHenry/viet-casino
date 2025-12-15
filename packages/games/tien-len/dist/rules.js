@@ -19,6 +19,11 @@ export function cardIsBigger(cardA, cardB) {
     else
         return getRankValue(cardA) > getRankValue(cardB);
 }
+export function sortHelper(a, b) {
+    if (a === b)
+        return 0;
+    return cardIsBigger(a, b) ? 1 : -1;
+}
 // export function cardIsPlayable(card: number, currentPlay: number[]): boolean {
 //     if (cardIsBigger(card, currentPlay[0])) {
 //         if (currentPlay.length === 1) return true;

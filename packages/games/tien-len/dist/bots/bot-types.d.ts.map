@@ -1,0 +1,1 @@
+{"version":3,"file":"bot-types.d.ts","sourceRoot":"","sources":["../../src/bots/bot-types.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,SAAS,EAAE,OAAO,EAAE,MAAM,kBAAkB,CAAA;AAErD,MAAM,WAAW,GAAG;IAChB,MAAM,CAAC,KAAK,EAAE,SAAS,GAAG,OAAO,GAAG,OAAO,CAAC,OAAO,CAAC,GAAG,IAAI,CAAA;CAC9D"}

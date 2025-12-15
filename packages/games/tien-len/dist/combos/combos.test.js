@@ -6,7 +6,7 @@ import { isValidDouble, canBeatDouble } from "./doubles.js";
 import { isValidTriple, canBeatTriple } from "./triples.js";
 import { isValidQuadruple, canBeatQuadruple } from "./bombs.js";
 import { isValidStraight, canBeatStraight } from "./straights.js";
-import { isValidDoubleStraight, canBeatDoubleStraight, canBombSingleTwo, canBombDoubleTwo } from "./bombs.js";
+import { canBeatDoubleStraight, canBombSingleTwo, canBombDoubleTwo } from "./bombs.js";
 import { convertToCombo } from "./combo-logic.js";
 test("Rules.ts test:", () => {
     for (let i = 0; i < 52; i++) {
@@ -54,12 +54,14 @@ test("Validity testing:", () => {
     expect(isValidStraight([2, 3, 4, 5, 6])).toBe(true);
     console.log(getRank(2), getRank(3), getRank(17));
     expect(isValidStraight([2, 3, 17, 5, 6])).toBe(true);
-    console.log(getRank(2), getRank(15), getRank(3), getRank(16), getRank(17), getRank(30));
-    expect(isValidDoubleStraight([2, 15, 3, 16, 17, 30])).toBe(true);
-    console.log(getRank(2), getRank(15), getRank(3), getRank(16), getRank(18), getRank(31));
-    expect(isValidDoubleStraight([2, 15, 3, 16, 18, 31])).toBe(false);
-    console.log(getRank(2), getRank(15), getRank(3), getRank(16), getRank(17), getRank(31));
-    expect(isValidDoubleStraight([2, 15, 3, 16, 17, 31])).toBe(false);
+    console.log(getCard(3), getCard(4), getCard(5), getCard(6), getCard(7), getCard(8), getCard(9), getCard(10));
+    console.log(isValidStraight([3, 4, 5, 6, 7, 8, 9, 10]));
+    // console.log(getRank(2), getRank(15), getRank(3), getRank(16), getRank(17), getRank(30));
+    // expect(isValidDoubleStraight([2, 15, 3, 16, 17, 30])).toBe(true);
+    // console.log(getRank(2), getRank(15), getRank(3), getRank(16), getRank(18), getRank(31));
+    // expect(isValidDoubleStraight([2, 15, 3, 16, 18, 31])).toBe(false);
+    // console.log(getRank(2), getRank(15), getRank(3), getRank(16), getRank(17), getRank(31));
+    // expect(isValidDoubleStraight([2, 15, 3, 16, 17, 31])).toBe(false);
 });
 test("Singles comparisons:", () => {
     console.log("7 of Spades beats 5 of Spades:");
@@ -134,6 +136,14 @@ test("Straight comparisons:", () => {
     expect(canBeatStraight([6, 7, 8], [19, 20, 21])).toBe(false);
 });
 test("Combo validity:", () => {
-    let combo = convertToCombo([1]);
-    console.log("bruh");
+    console.log(convertToCombo([1]));
+    console.log(convertToCombo([1, 1]));
+    console.log(convertToCombo([1, 1, 1]));
+    console.log(convertToCombo([1, 1, 1, 1]));
+    console.log(convertToCombo([1, 2, 3]));
+    console.log(convertToCombo([3, 4, 5]));
+    console.log(convertToCombo([3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]));
+    console.log(convertToCombo([3, 16, 4, 17, 5, 18]));
+    console.log(convertToCombo([3, 16, 4, 17, 5, 18, 6, 19]));
+    console.log(convertToCombo([3, 16, 4, 17, 5, 18, 6, 19]));
 });

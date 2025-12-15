@@ -1,5 +1,5 @@
 import { canBeatDouble } from "./doubles.js";
-import { getCard, getRank } from "@viet-casino/awesome-card-rules";
+import { getCard } from "@viet-casino/awesome-card-rules";
 import * as cards from '@viet-casino/awesome-card-rules';
 export function isValidDoubleStraight(selectedCombo) {
     if (selectedCombo.length < 6 || selectedCombo.length % 2 !== 0)
@@ -7,12 +7,12 @@ export function isValidDoubleStraight(selectedCombo) {
     for (let i = 2; i < selectedCombo.length; i++) {
         if (cards.getRank(selectedCombo[i]) === '2')
             return false; //straight cannot contain '2'
-        if (Number(getRank(selectedCombo[i])) !== Number(getRank(selectedCombo[i - 2])) + 1) {
+        if ((Number(selectedCombo[i]) % 13) !== (Number(selectedCombo[i - 2]) % 13) + 1) {
             return false;
         }
     }
     for (let i = 0; i < selectedCombo.length; i += 2) {
-        if (Number(getRank(selectedCombo[i])) !== Number(getRank(selectedCombo[i + 1])))
+        if ((Number(selectedCombo[i]) % 13) !== (Number(selectedCombo[i + 1]) % 13))
             return false; //check for pairs
     }
     return true;
