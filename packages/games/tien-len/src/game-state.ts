@@ -38,15 +38,22 @@ export function reducer(state: GameState, action: Actions): GameState {
       }
       if (state.phase.type === 'Round') {
         if ((state.phase.round.controller === action.player && state.phase.round.combosPlayed === 0)) {
+          console.log(`${action.player} has gained control! V1`);
           return handlers.handlePlayFromControl(state, state.players[action.player], action.combo);
         }
-        if ((state.phase.round.passesSinceWin === state.seats.length - state.winners.length && state.phase.round.inheritor === action.player)) {
+        //console.log(`${state.phase.round.passesSinceWin} vs ${state.seats.length - state.winners.length - 1}`)
+        //console.log(`${state.phase.round.inheritor} vs ${action.player}`)
+        console.log(`playersIn: ${state.phase.round.playersIn.size}`);
+        if ((state.phase.round.playersIn.size === 1 || state.phase.round.inheritor === action.player)) {
+          console.log(`${action.player} has gained control! V2`);
           return handlers.handlePlayFromControl(state, state.players[action.player], action.combo);
         }
         return handlers.handlePlayCard(state, state.players[action.player], action.combo);
       }
       return { ...state, error: 'Cannot play in this phase.' };
     case 'PASS':
+      //console.log(`${state.phase.round.passesSinceWin} vs ${state.seats.length - state.winners.length - 1}`)
+      //console.log(`${state.phase.round.inheritor} vs ${action.player}`)
       return handlers.handlePass(state, state.players[action.player]);
     default:
       return state;
