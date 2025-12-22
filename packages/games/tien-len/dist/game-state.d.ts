@@ -19,6 +19,7 @@ export type Phase = {
 };
 export declare function createGame(seats: PlayerID[]): GameState;
 export declare function reducer(state: GameState, action: Actions): GameState;
+export declare function convertPlayersIn(state: GameState): any;
 export type Actions = {
     type: 'DEAL';
 } | {

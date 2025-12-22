@@ -1,5 +1,5 @@
 import { canBeatDouble } from "./doubles.js";
-import { getCard } from "@viet-casino/awesome-card-rules";
+import { getCard, getRank } from "@viet-casino/awesome-card-rules";
 import * as cards from '@viet-casino/awesome-card-rules';
 export function isValidDoubleStraight(selectedCombo) {
     if (selectedCombo.length < 6 || selectedCombo.length % 2 !== 0)
@@ -30,7 +30,7 @@ export function canBeatDoubleStraight(doubleStraightA, doubleStraightB) {
 export function isValidQuadruple(selectedCombo) {
     if (selectedCombo.length !== 4)
         return false;
-    if (getCard(selectedCombo[0])[0] !== getCard(selectedCombo[1])[0] || getCard(selectedCombo[0])[0] !== getCard(selectedCombo[2])[0] || getCard(selectedCombo[0])[0] !== getCard(selectedCombo[3])[0])
+    if (getRank(selectedCombo[0]) !== getRank(selectedCombo[1]) || getRank(selectedCombo[0]) !== getRank(selectedCombo[2]) || getRank(selectedCombo[0]) !== getRank(selectedCombo[3]))
         return false;
     else
         return true;

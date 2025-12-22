@@ -24,14 +24,16 @@ class TienLenEnv(gym.Env):
         self.last_played = np.zeros(52)
         self.game_id = None
         self.players_in = np.zeros(4)
-        self.opponent_card_count = np.zeros(3)
+        self.opponent1_card_count = np.array([1.0], dtype=np.float32)
+        self.opponent2_card_count = np.array([1.0], dtype=np.float32)
+        self.opponent3_card_count = np.array([1.0], dtype=np.float32)
         self.opponents_passed = np.zeros(4) # Making it all consistent, using a mask to represent all passed opponents
         self.current_controller = np.zeros(4) 
         self.current_player = np.zeros(4) # Making it all consistent, using a mask to represent current player
         self.player_order = ["agent", "bot1", "bot2", "bot3"]
         self.roundNumber = 0
         self.round_status = None
-        obs_dimensions = 52 + 52 + 3 + 4 + 4 + 4
+        obs_dimensions = 52 + 52 + 1 + 1 + 1 + 4 + 4 + 4
         self.observation_space = gym.spaces.Box(
             low=0.0,
             high=1.0,
@@ -60,19 +62,42 @@ class TienLenEnv(gym.Env):
         return mask
         
     def _get_obs(self, state):
-        self.agent_hand = self._convert_hand(state["players"][0]["hand"])
-        self.last_played = self._convert_hand(state["phase"]["lastComboPlayed"]["cards"])
-        self.opponent_card_count[0] = len(state["players"][1]["hand"])
-        self.opponent_card_count[1] = len(state["players"][2]["hand"])
-        self.opponent_card_count[2] = len(state["players"][3]["hand"])
-        self.current_controller = self._convert_player(state["phase"]["round"]["controller"])
-        self.current_player = self._convert_player(state["phase"]["round"]["currentPlayer"])
-        self.players_in = self._convert_table(state["phase"]["round"]["playersIn"])
+
+        self.last_played = np.zeros(52)
+        self.agent_hand = self._convert_hand(state["players"]["agent"]["hand"])
+        self.opponent1_card_count = np.array([len(state["players"]["bot1"]["hand"]) / 13], dtype=np.float32)
+        self.opponent2_card_count = np.array([len(state["players"]["bot2"]["hand"]) / 13], dtype=np.float32)
+        self.opponent3_card_count = np.array([len(state["players"]["bot3"]["hand"]) / 13], dtype=np.float32)
+        self.current_controller = np.zeros(4)
+        self.current_player = np.zeros(4)
+        self.players_in = np.zeros(4)
+            
+        if state["phase"]["type"] == "FirstPlay":
+            self.current_controller = self._convert_player(state["phase"]["starter"])
+            self.current_player = self._convert_player(state["phase"]["starter"])
+            self.players_in = np.ones(4)
+
+        elif state["phase"]["type"] == "Round":
+            if not state["phase"]["round"].get("lastComboPlayed"): # Someone has control, no last played
+                self.last_played = np.zeros(52)
+            else: 
+                self.last_played = self._convert_hand(state["phase"]["round"]["lastComboPlayed"]["cards"])
+
+            self.agent_hand = self._convert_hand(state["players"]["agent"]["hand"])
+            self.opponent1_card_count = np.array([len(state["players"]["bot1"]["hand"]) / 13], dtype=np.float32)
+            self.opponent2_card_count = np.array([len(state["players"]["bot2"]["hand"]) / 13], dtype=np.float32)
+            self.opponent3_card_count = np.array([len(state["players"]["bot3"]["hand"]) / 13], dtype=np.float32)
+            self.current_controller = self._convert_player(state["phase"]["round"]["controller"])
+            self.current_player = self._convert_player(state["phase"]["round"]["currentPlayer"])
+            self.players_in = self._convert_table(state["phase"]["round"]["playersIn"])     
+
         # TODO: Figure out a way to calculate how many opponents have passed(opponents_passed) 
         obs = np.concatenate([
             self.agent_hand, 
             self.last_played, 
-            self.opponent_card_count,
+            self.opponent1_card_count,
+            self.opponent2_card_count,
+            self.opponent3_card_count,
             self.current_controller,
             self.current_player,
             self.players_in
@@ -86,25 +111,41 @@ class TienLenEnv(gym.Env):
         
     def step(self, action_id: int):
         move_type, card_id = self.action[action_id]
+        reward = 0
         if move_type == "PASS":
             url = f"{self.server_url}/{self.game_id}/pass/{self.player_id}"
-            response = requests.post(url)
-            data = response.json()
-            self.game_id = data["gameID"]
-            state = data["state"]
-
+            requests.post(url, timeout = 5)
+            reward -= 0.01
         else:
             url = f"{self.server_url}/{self.game_id}/play/{self.player_id}"
             payload = {"type": "Single", "cards": [card_id]}
-            response = requests.post(url, json=payload)
-            data = response.json()
-            self.game_id = data["gameID"]
-            state = data["state"]
+            response = requests.post(url, json=payload, timeout = 5)
+            
+            if "error" in response.json().get("state", {}) or "error" in response.json():
+                reward -= 0.2
+                url = f"{self.server_url}/{self.game_id}/pass/{self.player_id}"
+                requests.post(url, timeout = 5)
+
+        url = f"{self.server_url}/{self.game_id}/botstep"
+        response = requests.post(url, timeout = 5)
+        data = response.json()
+        self.game_id = data["gameID"]
+        state = data["state"]
+
         terminated = False
-        self.round_status = data["phase"]["type"]
+        self.round_status = state["phase"]["type"]
         if self.round_status == "End":
             terminated = True
-        reward = 0
+            ranking = state["phase"]["ranking"]
+            if ranking[0] == "agent":
+                reward += 1
+            elif ranking[1] == "agent":
+                reward += 0.5
+            elif ranking[2] == "agent":
+                reward -= 0.5
+            else:
+                reward -= 1
+
         truncated = False
         obs = self._get_obs(state)
         info = state
@@ -112,21 +153,20 @@ class TienLenEnv(gym.Env):
         return obs, reward, terminated, truncated, info
 
     def reset(self, seed: Optional[int] = None, options: Optional[dict] = None):
+        super().reset(seed=seed)
+        
         url = f"{self.server_url}/start"
         payload = {"players": ["agent", "bot1", "bot2", "bot3"]}
-        response = requests.post(url, json=payload)
+        response = requests.post(url, json=payload, timeout = 5)
 
         data = response.json()
-        self.card_counting = np.zeros(52)
-        self.opponent_card_count[:] = 13
-        self.opponents_passed = np.zeros(4)
-        self.current_controller = np.zeros(4)
-        self.current_player = np.zeros(4)
-        self.roundNumber = None
-        self.agent_hand = self._convert_hand(data["state"]["players"][0]["hand"])
-
         self.game_id = data["gameID"]
+
+        url = f"{self.server_url}/{self.game_id}/botstep"
+        response = requests.post(url, timeout = 5)
+        data = response.json()
         state = data["state"]
+
         obs = self._get_obs(state)
         info = state
         self.last_state = state

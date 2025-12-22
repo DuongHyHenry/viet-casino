@@ -31,14 +31,15 @@ export function createGame(seats: PlayerID[]): GameState {
 export function reducer(state: GameState, action: Actions): GameState {
   switch (action.type) {
     case 'DEAL':
+      console.log(`[DEAL]`);
       return handlers.handleDealing(state);
     case 'PLAY':
+      console.log(`[PLAY] ${action.player}`, action.combo);
       if (state.phase.type === 'FirstPlay') {
         return handlers.handleFirstPlay(state, state.players[action.player], action.combo);
       }
       if (state.phase.type === 'Round') {
         if ((state.phase.round.controller === action.player && state.phase.round.combosPlayed === 0)) {
-          console.log(`${action.player} has gained control! V1`);
           return handlers.handlePlayFromControl(state, state.players[action.player], action.combo);
         }
         //console.log(`${state.phase.round.passesSinceWin} vs ${state.seats.length - state.winners.length - 1}`)
@@ -52,12 +53,26 @@ export function reducer(state: GameState, action: Actions): GameState {
       }
       return { ...state, error: 'Cannot play in this phase.' };
     case 'PASS':
-      //console.log(`${state.phase.round.passesSinceWin} vs ${state.seats.length - state.winners.length - 1}`)
-      //console.log(`${state.phase.round.inheritor} vs ${action.player}`)
+      console.log(`[PASS] ${action.player}`);
       return handlers.handlePass(state, state.players[action.player]);
     default:
       return state;
   }
+}
+
+export function convertPlayersIn(state: GameState): any {
+  if (state.phase.type !== "Round") return state;
+
+  return {
+    ...state,
+    phase: {
+      ...state.phase,
+      round: {
+        ...state.phase.round,
+        playersIn: Array.from(state.phase.round.playersIn ?? []),
+      },
+    },
+  };
 }
 
 export type Actions =

@@ -12,8 +12,10 @@ from tqdm import tqdm
 from itertools import count
 import random
 import math
+import requests
+from ..env.tienlen_env import TienLenEnv
 
-env = gym.make("TienLenEnv") # Figure out how to actually do this
+env = TienLenEnv()
 
 device = torch.device(
     "cuda" if torch.cuda.is_available() else "cpu"
@@ -72,11 +74,11 @@ class TienLenDQNAgent:
         self.batch_size = 128 # TODO: Don't quite understand this yet
         self.memory = ReplayMemory(10000)
 
-        self.state, self.info = env.reset()
+        self.state, self.info = self.env.reset()
 
         # Instantiating networks
-        input_size = env.observation_space.shape[0] # 52 + 52 + 3 + 4 + 4 + 4
-        output_size = env.action_space.n # 53 possible actions
+        input_size = self.env.observation_space.shape[0] # 52 + 52 + 3 + 4 + 4 + 4
+        output_size = self.env.action_space.n # 53 possible actions
         hidden_size = 128
         self.online_network = QNetwork(input_size, hidden_size, output_size).to(device)
         self.target_network = QNetwork(input_size, hidden_size, output_size).to(device)
@@ -86,6 +88,31 @@ class TienLenDQNAgent:
 
         self.optimizer = optim.Adam(self.online_network.parameters(), lr = self.lr) # Turns the "knobs" in the right direction to minimize and follow backpropagation
 
+    def get_action_mask(self, state):
+        mask = np.zeros(53)
+
+        if state["phase"]["type"] == "FirstPlay":
+            if state["phase"]["starter"] == self.player_id:
+                mask[2 + 1] = 1
+            return mask
+        
+        if state["phase"]["type"] != "Round":
+            return mask
+        
+        if state["phase"]["round"]["currentPlayer"] != self.player_id:
+            return mask
+        
+        if state["phase"]["round"]["lastComboPlayed"]:
+            mask[0] = 1
+
+        url = f"{self.server_url}/{self.game_id}/legal-actions/{self.player_id}"
+        response = requests.get(url)
+        data = response.json()
+        legal_cards = data["legalActions"]
+        for card in legal_cards:
+            mask[card + 1] = 1
+
+        return mask
 
     
     def get_action(self, obs):
@@ -101,7 +128,7 @@ class TienLenDQNAgent:
                 return q_values.max(1)[1].view(1, 1)
         else:
             # Explore
-            return torch.tensor([[env.action_space.sample()]],
+            return torch.tensor([[self.env.action_space.sample()]],
                             device=device, dtype=torch.long)
         
 # TODO: HEAVY research on optimize function
@@ -109,7 +136,7 @@ class TienLenDQNAgent:
     def optimize(self):
         if len(self.memory) < self.batch_size:
             return
-        
+
         transitions = self.memory.sample(self.batch_size)
         batch = Transition(*zip(*transitions))
 
@@ -118,39 +145,28 @@ class TienLenDQNAgent:
             device=device, dtype=torch.bool
         )
 
-        non_final_next_states = torch.cat(
-            [s for s in batch.next_state if s is not None]
-        )
-
         state_batch = torch.cat(batch.state)
         action_batch = torch.cat(batch.action)
         reward_batch = torch.cat(batch.reward)
 
-        # Q(s, a) from policy_net
         q_values = self.online_network(state_batch)
-        state_action_values = q_values.gather(1, action_batch)  # fixed: gather on q_values
+        state_action_values = q_values.gather(1, action_batch)
 
-        # Compute V(s') for all next states using target_net
         next_state_values = torch.zeros(self.batch_size, device=device)
-        with torch.no_grad():
-            next_state_values[non_final_mask] = self.target_network(
-                non_final_next_states
-            ).max(1)[0]
+        non_final_next_states_list = [s for s in batch.next_state if s is not None]
+        if len(non_final_next_states_list) > 0:
+            non_final_next_states = torch.cat(non_final_next_states_list)
+            with torch.no_grad():
+                next_state_values[non_final_mask] = self.target_network(non_final_next_states).max(1)[0]
 
-        # Compute expected Q values
-        expected_state_action_values = (next_state_values * self.discount_factor) + reward_batch
+        expected_state_action_values = reward_batch + (self.discount_factor * next_state_values)
 
-        # Loss
-        criterion = nn.SmoothL1Loss()
-        loss = criterion(state_action_values,
-                        expected_state_action_values.unsqueeze(1))
+        loss = nn.SmoothL1Loss()(state_action_values, expected_state_action_values.unsqueeze(1))
 
-        # Optimize
         self.optimizer.zero_grad()
         loss.backward()
         torch.nn.utils.clip_grad_value_(self.online_network.parameters(), 100)
         self.optimizer.step()
-
 
     def update(self, obs):
         return
@@ -167,12 +183,12 @@ class TienLenDQNAgent:
             num_episodes = 50
 
         for i_episode in range(num_episodes):
-            state, info = env.reset()
+            state, info = self.env.reset()
             state = torch.tensor(state, dtype = torch.float32, device = device).unsqueeze(0)
 
             for t in count():
                 action =  self.get_action(state)
-                observation, reward, terminated, truncated, info = env.step(action.item())
+                observation, reward, terminated, truncated, info = self.env.step(action.item())
                 reward = torch.tensor([reward], device = device)
                 done = terminated or truncated
                 
@@ -196,7 +212,7 @@ class TienLenDQNAgent:
 
                 if done:
                     self.episode_durations.append(t + 1)
-                    plot_durations() # No plots atm
+                    #plot_durations() # No plots atm
                     break
 
 

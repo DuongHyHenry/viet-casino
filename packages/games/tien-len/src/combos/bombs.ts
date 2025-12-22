@@ -32,7 +32,7 @@ export function canBeatDoubleStraight(doubleStraightA: number[], doubleStraightB
 
 export function isValidQuadruple(selectedCombo: number[]): boolean { 
     if (selectedCombo.length !== 4) return false;
-    if (getCard(selectedCombo[0])[0] !== getCard(selectedCombo[1])[0] || getCard(selectedCombo[0])[0] !== getCard(selectedCombo[2])[0] || getCard(selectedCombo[0])[0] !== getCard(selectedCombo[3])[0]) return false;
+    if (getRank(selectedCombo[0]) !== getRank(selectedCombo[1]) || getRank(selectedCombo[0]) !== getRank(selectedCombo[2]) || getRank(selectedCombo[0]) !== getRank(selectedCombo[3])) return false;
     else return true;
 }
 

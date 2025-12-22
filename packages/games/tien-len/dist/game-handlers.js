@@ -39,7 +39,7 @@ export function handleDealing(state) {
         const id = state.seats[i];
         const hand = cards
             .slice(i * 13, (i + 1) * 13)
-            .sort(sortHelper); //TODO: sorts by numeric order right now, change it to sort by actual tien len strength
+            .sort(sortHelper);
         players[id] = {
             id: id,
             hand: hand,
@@ -118,7 +118,7 @@ export function handlePlayCard(state, player, selectedCombo) {
                 currentPlayer: findNextPlayer(state, round, player.id),
                 combosPlayed: round.combosPlayed + 1,
                 playersIn: round.playersIn,
-                passesSinceWin: 0,
+                passesSinceWin: round.passesSinceWin,
                 inheritor: undefined,
             }) }, state.seats, state.seatIndex, updatedPlayers, state.winners);
     }
@@ -133,7 +133,12 @@ export function handlePass(state, player) {
     if (player.id !== round.currentPlayer) {
         return { ...state, error: 'Not your turn.' };
     }
-    if (state.phase.round.playersIn.size === 1) {
+    if (state.phase.round.playersIn.size === 2) {
+        const newPlayersIn = new Set(round.playersIn);
+        if (!newPlayersIn.has(player.id)) {
+            return { ...state, error: 'You already passed.' };
+        }
+        newPlayersIn.delete(player.id);
         if (round.playerToBeat === null) {
             return { ...state, error: 'Invalid round state, player to beat should not be null.' };
         }
@@ -144,7 +149,7 @@ export function handlePass(state, player) {
                 playerToBeat: null,
                 currentPlayer: round.playerToBeat,
                 combosPlayed: 0,
-                playersIn: new Set(alive),
+                playersIn: newPlayersIn,
                 passesSinceWin: 0,
                 inheritor: undefined,
             }) }, state.seats, state.seatIndex, state.players, state.winners);
@@ -155,10 +160,8 @@ export function handlePass(state, player) {
             return { ...state, error: 'You already passed.' };
         }
         newPlayersIn.delete(player.id);
-        let passesSinceWinValue = round.passesSinceWin;
-        if (state.phase.round.inheritor) {
-            passesSinceWinValue++;
-        }
+        console.log(newPlayersIn);
+        const passesSinceWinValue = round.combosPlayed > 0 ? round.passesSinceWin + 1 : 0;
         const nextRound = { ...round, playersIn: newPlayersIn };
         return updateGameState({ type: 'Round', round: updateRoundState(round, {
                 controller: round.controller,
@@ -175,6 +178,7 @@ export function handlePlayFromControl(state, player, selectedCombo) {
     if (state.phase.type !== 'Round') {
         return { ...state, error: 'Not in Round Phase.' };
     }
+    console.log(`Control Acquired by ${state.phase.round.currentPlayer}`);
     const round = state.phase.round;
     if (combos.isValidCombo(selectedCombo) !== null) {
         const newHand = state.players[player.id].hand.filter(card => !selectedCombo.cards.includes(card));

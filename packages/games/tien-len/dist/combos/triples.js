@@ -1,9 +1,9 @@
 import { cardIsBigger } from "../rules.js";
-import { getCard, getRank } from "@viet-casino/awesome-card-rules";
+import { getRank } from "@viet-casino/awesome-card-rules";
 export function isValidTriple(selectedCombo) {
     if (selectedCombo.length !== 3)
         return false;
-    if (getRank(selectedCombo[0]) !== getCard(selectedCombo[1])[0] || getCard(selectedCombo[0])[0] !== getCard(selectedCombo[2])[0])
+    if (getRank(selectedCombo[0]) !== getRank(selectedCombo[1]) || getRank(selectedCombo[0]) !== getRank(selectedCombo[2]))
         return false;
     else
         return true;
