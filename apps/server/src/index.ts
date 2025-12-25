@@ -10,7 +10,7 @@ fs;
 const games = new Map<string, tienlen.GameState>();
 
 const fastify = Fastify({
-    logger: true
+    logger: false
 });
 
 const io = new Server(fastify.server, {

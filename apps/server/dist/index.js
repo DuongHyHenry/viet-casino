@@ -6,13 +6,15 @@ import * as tienlen from '@viet-casino/awesome-tien-len';
 fs;
 const games = new Map();
 const fastify = Fastify({
-    logger: true
+    logger: false
 });
 const io = new Server(fastify.server, {
     cors: { origin: '*' },
 });
 io.on('connection', (socket) => {
+    console.log('A user connected');
     socket.on('message', (message) => {
+        console.log(message);
         io.emit('message', message);
     });
 });

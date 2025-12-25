@@ -61,6 +61,34 @@ class TienLenEnv(gym.Env):
         mask[index] = 1
         return mask
         
+    def get_action_mask(self, state):
+        mask = np.zeros(self.action_space.n, dtype=np.uint8)
+
+        phase = state.get("phase", {}).get("type")
+
+        if phase == "FirstPlay":
+            if state["phase"].get("starter") == self.player_id:
+                mask[2 + 1] = 1
+            return mask
+        
+        if phase != "Round":
+            return mask
+        
+        if state["phase"]["round"].get("currentPlayer") != self.player_id:
+            return mask
+        
+        if state["phase"]["round"].get("lastComboPlayed"):
+            mask[0] = 1
+
+        url = f"{self.server_url}/{self.game_id}/legal-actions/{self.player_id}"
+        response = requests.get(url)
+        data = response.json()
+        legal_cards = data["legalActions"]
+        for card in data.get("legalActions", []):
+            mask[card + 1] = 1
+
+        return mask
+
     def _get_obs(self, state):
 
         self.last_played = np.zeros(52)
